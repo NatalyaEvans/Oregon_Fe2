@@ -106,7 +106,9 @@ for i=1:length(stns_sorted)
     % make figure modifications
 %     if i==length(stns_sorted)
     if i==1
-        legend('Fe(II)','Sampled Fe(II)','dFe')
+%         legend('Fe(II)','Sampled Fe(II)','dFe')
+        legend('Fe(II)','Fe(II)_{t=0}','dFe')
+
     end
     
     box on

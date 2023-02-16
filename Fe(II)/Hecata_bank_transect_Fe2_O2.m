@@ -119,7 +119,7 @@ gridded(190:220,2)=data_binned.Potentialdensitykgm3(data_binned.Station==32 & da
 a=area(coast_x(ind_save),bathy','FaceColor','none','EdgeColor','none');
 a(2).FaceColor=[160/255 160/255 160/255];
 % text([-124.689909052631,-124.319720102041],[250,200],{'40 nM','47 nM'});
-text([-124.68-0.05,-124.31-0.085],[250,180],{'40 nM','47 nM'});
+% text([-124.68-0.05,-124.31-0.085],[250,180],{'40 nM','47 nM'});
 % clabel(C,h1,[26.5,26.6,26.8],'LabelSpacing',200)
 
 axis ij
@@ -135,42 +135,40 @@ xlabel(['Longitude/' char(176)' 'E'])
 hold off
 saveas(gcf,'Hecata_Fe2.svg')
 
-%% O2
+%% dFe
 
-xrange=[];
-load('OC2107A1mbinned')
-cmap = cmocean('-ice');
-cmax=200;
-
-%% Hecata Bank transect
-
-data=OC2107A1mbinned(OC2107A1mbinned.Station==31 | OC2107A1mbinned.Station==32 | OC2107A1mbinned.Station==33,:); % subset data
-data.O2uM=data.Oxygenumolkg1.*((1000+data.Potentialdensitykgm3)./1000);
-
+clear xrange
+cmax=10;
 botdepth=1000;
 yrange=[0:1:botdepth];
 gridded=ones(length(yrange),length(unique(data.Station))).*NaN; % make the structure to fill in
 
-stns=[33 32 31];
+stns=[31 32 33];
 
-for i=1:2 % first loop fills in with the deeper stations
+data(isnan(data.dFenM)==1,:)=[]; % remove NaNs bc they cause blank spaces
+
+%% 
+
+for i=1:3 % first loop fills in with the deeper stations
     inds2=data.Station==31; % pick a station
-    gridded(floor(data.Depthm(inds2)),i)=data.O2uM(inds2)'; % fill in the contour
+    gridded(yrange(1:end)+1,i)=interp1(data.Depthm(inds2),data.dFenM(inds2),yrange,'linear','extrap'); % fill in the contour with an interpolation
 end
 
 for i=2:3 % first loop fills in with the deeper stations
     inds2=data.Station==32; % pick a station
-    gridded(floor(data.Depthm(inds2)),i)=data.O2uM(inds2)'; % fill in the contour
+    depthmax=220;
+    gridded(1:depthmax,i)=interp1(data.Depthm(inds2),data.dFenM(inds2),[1:depthmax],'nearest','extrap'); % fill in the contour with an interpolation
 end
+
+inds2=data.Station==33; % pick a station
+depthmax=120;
+gridded(1:depthmax,i)=interp1(data.Depthm(inds2),data.dFenM(inds2),[1:depthmax],'nearest','extrap'); % fill in the contour with an interpolation
+
 
 for i=1:length(stns) % fix the data
-    inds2=data.Station==stns(i); % pick a station
-    gridded(floor(data.Depthm(inds2)),i)=data.O2uM(inds2)'; % fill in the contour
+	inds2=data.Station==stns(i); % pick a station
     xrange(i)=mean(data.Longitude(inds2));
 end
-
-gridded(99:200,1)=data.O2uM(data.Station==33 & data.Depthm==99); % fill in a depth issue
-gridded(190:220,2)=data.O2uM(data.Station==32 & data.Depthm==189); % fill in a depth issue
 
 
 ind=[data.Station==31 | data.Station==32 | data.Station==33];
@@ -178,29 +176,149 @@ max_lat=max(data.Latitude(ind));
 min_lat=min(data.Latitude(ind));
 
 ind=coast_y<max_lat & coast_y>min_lat;
-ind2=coast_x<xrange(1) & coast_x>xrange(end);
+ind2=coast_x<xrange(end) & coast_x>xrange(1);
 
 bathy=mean(-coastal_relief_3sec(ind,ind2));
 bathy=[bathy;ones(size(bathy)).*botdepth];
 
 
-figure(2)
-contourf(xrange,yrange,gridded,[min(data.O2uM):5:cmax],'LineColor','none')
+gridded=[gridded(:,1), gridded(:,1),gridded(:,2), gridded(:,2:3)]; % add in an invisible cast to stop stn 32 from smearing into stn 31
+xrange=[xrange(1), -124.8, xrange(2),-124.4, xrange(3)];
+gridded(gridded<0)=0;
+
+figure(3)
+contourf(xrange,yrange,gridded,[0:0.1:cmax],'LineColor','none')
 hold on
-plot(data.Longitude,data.Depthm,'ko','MarkerFaceColor','k','MarkerSize',1)
-a=area(coast_x(ind2),bathy','FaceColor','none','EdgeColor','none');
+plot(data.Longitude,data.Depthm,'ko','MarkerFaceColor','k','MarkerSize',2.5)
+
+xrange2=xrange;
+ind_save=ind2;
+
+%% work up pdens contours
+
+xrange=[];
+
+data_binned=OC2107A1mbinned(OC2107A1mbinned.Station==31 | OC2107A1mbinned.Station==32 | OC2107A1mbinned.Station==33,:); % subset data_binned
+yrange=[0:1:botdepth];
+gridded=ones(length(yrange),length(unique(data_binned.Station))).*NaN; % make the structure to fill in
+
+stns=[33 32 31]; % fill in the stations
+for i=1:2 % first loop fills in with the deeper stations
+    inds2=data_binned.Station==31; % pick a station
+    gridded(floor(data_binned.Depthm(inds2)),i)=data_binned.Potentialdensitykgm3(inds2)'; % fill in the contour
+end
+for i=2:3 % first loop fills in with the deeper stations
+    inds2=data_binned.Station==32; % pick a station
+    gridded(floor(data_binned.Depthm(inds2)),i)=data_binned.Potentialdensitykgm3(inds2)'; % fill in the contour
+end
+for i=1:length(stns) % fix the data_binned
+    inds2=data_binned.Station==stns(i); % pick a station
+    gridded(floor(data_binned.Depthm(inds2)),i)=data_binned.Potentialdensitykgm3(inds2)'; % fill in the contour
+    xrange(i)=mean(data_binned.Longitude(inds2));
+end
+
+gridded(99:200,1)=data_binned.Potentialdensitykgm3(data_binned.Station==33 & data_binned.Depthm==99); % fill in a depth issue
+gridded(190:220,2)=data_binned.Potentialdensitykgm3(data_binned.Station==32 & data_binned.Depthm==189); % fill in a depth issue
+
+
+[C,h1]=contour(xrange,yrange,gridded,[0,26.5,26.6,26.8],'k--','LineWidth',0.25);
+
+
+% return to plotting
+
+
+a=area(coast_x(ind_save),bathy','FaceColor','none','EdgeColor','none');
 a(2).FaceColor=[160/255 160/255 160/255];
+% text([-124.689909052631,-124.319720102041],[250,200],{'40 nM','47 nM'});
+% text([-124.68-0.05,-124.31-0.085],[250,180],{'12 nM','40 nM'});
+% clabel(C,h1,[26.5,26.6,26.8],'LabelSpacing',200)
+
 axis ij
 ylim([0 botdepth])
 h=colorbar;
 colormap(cmap)
-caxis([min(data.O2uM),cmax])
+caxis([0,cmax])
 
-set(get(h,'label'),'string','O_2/{\mu}M','FontSize',12);
+set(get(h,'label'),'string','dFe/nM','FontSize',12);
 ylabel('Depth/m')
-% set(gca,'YTickLabels',[]);
 xlabel(['Longitude/' char(176)' 'E'])
 % title('Hecata Bank')
 hold off
-saveas(gcf,'Hecata_O2.svg')
+saveas(gcf,'Hecata_dFe.svg')
 
+
+
+% %% O2
+% 
+% xrange=[];
+% load('OC2107A1mbinned')
+% cmap = cmocean('-ice');
+% cmax=200;
+% 
+% %% Hecata Bank transect
+% 
+% data=OC2107A1mbinned(OC2107A1mbinned.Station==31 | OC2107A1mbinned.Station==32 | OC2107A1mbinned.Station==33,:); % subset data
+% data.O2uM=data.Oxygenumolkg1.*((1000+data.Potentialdensitykgm3)./1000);
+% 
+% botdepth=1000;
+% yrange=[0:1:botdepth];
+% gridded=ones(length(yrange),length(unique(data.Station))).*NaN; % make the structure to fill in
+% 
+% stns=[33 32 31];
+% 
+% for i=1:2 % first loop fills in with the deeper stations
+%     inds2=data.Station==31; % pick a station
+%     gridded(floor(data.Depthm(inds2)),i)=data.O2uM(inds2)'; % fill in the contour
+% end
+% 
+% for i=2:3 % first loop fills in with the deeper stations
+%     inds2=data.Station==32; % pick a station
+%     gridded(floor(data.Depthm(inds2)),i)=data.O2uM(inds2)'; % fill in the contour
+% end
+% 
+% for i=1:length(stns) % fix the data
+%     inds2=data.Station==stns(i); % pick a station
+%     gridded(floor(data.Depthm(inds2)),i)=data.O2uM(inds2)'; % fill in the contour
+%     xrange(i)=mean(data.Longitude(inds2));
+% end
+% 
+% gridded(99:200,1)=data.O2uM(data.Station==33 & data.Depthm==99); % fill in a depth issue
+% gridded(190:220,2)=data.O2uM(data.Station==32 & data.Depthm==189); % fill in a depth issue
+% 
+% 
+% ind=[data.Station==31 | data.Station==32 | data.Station==33];
+% max_lat=max(data.Latitude(ind));
+% min_lat=min(data.Latitude(ind));
+% 
+% ind=coast_y<max_lat & coast_y>min_lat;
+% ind2=coast_x<xrange(1) & coast_x>xrange(end);
+% 
+% bathy=mean(-coastal_relief_3sec(ind,ind2));
+% bathy=[bathy;ones(size(bathy)).*botdepth];
+% 
+% 
+% figure(2)
+% contourf(xrange,yrange,gridded,[min(data.O2uM):5:cmax],'LineColor','none')
+% hold on
+% plot(data.Longitude,data.Depthm,'ko','MarkerFaceColor','k','MarkerSize',1)
+% a=area(coast_x(ind2),bathy','FaceColor','none','EdgeColor','none');
+% a(2).FaceColor=[160/255 160/255 160/255];
+% axis ij
+% ylim([0 botdepth])
+% h=colorbar;
+% colormap(cmap)
+% caxis([min(data.O2uM),cmax])
+% 
+% set(get(h,'label'),'string','O_2/{\mu}M','FontSize',12);
+% ylabel('Depth/m')
+% % set(gca,'YTickLabels',[]);
+% xlabel(['Longitude/' char(176)' 'E'])
+% % title('Hecata Bank')
+% hold off
+% saveas(gcf,'Hecata_O2.svg')
+% 
+% 
+% 
+% 
+% 
+% 

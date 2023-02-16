@@ -44,7 +44,7 @@ ylim([0 100])
 % set(get(h,'label'),'string','Time/min since sample collected');
 % xlabel('Fe/nM')
 ylabel('Height above seafloor/cm')
-legend([p1,p3,p2],{'Fe(II)','Sampled Fe(II)','dFe'})
+legend([p1,p3,p2],{'Fe(II)','Fe(II)_{t=0}','dFe'})
 xlim([0 60])
 grid on
 set(gca,'XTickLabel',[])

@@ -150,7 +150,9 @@ ylabel('Fe(II) half-life/hour')
 grid on
 hold off
 xlim([0 70])
-saveas(gca,'Fe2_halflifes.tif')
+% saveas(gca,'Fe2_halflifes.tif')
+saveas(gca,'Fe2_halflifes.jpg')
+
 
 % figure(3)
 % histogram(data2.tau,10)
